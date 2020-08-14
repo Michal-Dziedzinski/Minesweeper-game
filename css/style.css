@@ -24,7 +24,7 @@
 }
 @font-face {
   font-family: DIGITALDREAM;
-  src: url('./DIGITALDREAM.ttf');
+  src: url('../assets/DIGITALDREAM.ttf');
 }
 *,
 *::after,
