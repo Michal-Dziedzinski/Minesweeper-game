@@ -1,7 +1,7 @@
 export class UI {
   UiSelectors = {
-    // timer: '[data-timer]',
-    // counter: '[data-counter]',
+    timer: '[data-timer]',
+    counter: '[data-counter]',
     board: '[data-board]',
     cell: '[data-cell]',
     // resetButton: '[data-button-reset]',
