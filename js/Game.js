@@ -28,6 +28,7 @@ class Game extends UI {
   #timer = new Timer();
   #counter = new Counter();
 
+  #isGameFinished = false;
   #numberOfRows = null;
   #numberOfCols = null;
   #numberOfMines = null;
@@ -38,7 +39,7 @@ class Game extends UI {
   #board = null;
 
   initializeGame() {
-    this.#handleElements(); // później
+    this.#handleElements();
     this.#timer.init();
     this.#counter.init();
     // this.#addButtonsEventListeners();
@@ -60,12 +61,35 @@ class Game extends UI {
     this.#setStyles();
     this.#generateCells();
     this.#renderBoard();
-    // this.#placeMinesInCells();
+    this.#placeMinesInCells();
     this.#cellsElements = this.getElements(this.UiSelectors.cell);
     // this.#buttons.reset.changeEmoticon('neutral');
     // this.#isGameFinished = false;
     // this.#revealedCells = 0;
     this.#addCellsEventListeners();
+  }
+
+  #endGame(isWin) {
+    this.#isGameFinished = true;
+    this.#timer.stopTimer();
+    // this.#modal.buttonText = 'Close';
+    if (!isWin) {
+      this.#revealMines();
+      // this.#modal.infoText = 'You lost, try again!';
+      // this.#buttons.reset.changeEmoticon('negative');
+      // this.#modal.setText();
+      // this.#modal.toggleModal();
+      // return;
+    }
+    // this.#modal.infoText =
+    //   this.#timer.numberOfSeconds < this.#timer.maxNumberOfSeconds
+    //     ? `You won, it took you ${
+    //         this.#timer.numberOfSeconds
+    //       } seconds, congratulations!`
+    //     : `You won, congratulations!`;
+    // this.#modal.setText();
+    // this.#modal.toggleModal();
+    // this.#buttons.reset.changeEmoticon('positive');
   }
 
   #handleElements() {
@@ -99,13 +123,30 @@ class Game extends UI {
     });
   }
 
+  #placeMinesInCells() {
+    let minesToPlace = this.#numberOfMines;
+
+    while (minesToPlace) {
+      const rowIndex = this.#getRandomInteger(0, this.#numberOfRows - 1);
+      const colIndex = this.#getRandomInteger(0, this.#numberOfCols - 1);
+
+      const cell = this.#cells[rowIndex][colIndex];
+
+      const hasCellMine = cell.isMine;
+
+      if (!hasCellMine) {
+        cell.addMine();
+        minesToPlace--;
+      }
+    }
+  }
+
   #handleCellClick = (e) => {
     const target = e.target;
     const rowIndex = parseInt(target.getAttribute('data-y'), 10);
     const colIndex = parseInt(target.getAttribute('data-x'), 10);
 
-    this.#cells[rowIndex][colIndex].revealCell();
-    // this.#clickCell(this.#cells[rowIndex][colIndex]);
+    this.#clickCell(this.#cells[rowIndex][colIndex]);
   };
 
   #handleCellContextMenu = (e) => {
@@ -118,7 +159,7 @@ class Game extends UI {
     const cell = this.#cells[rowIndex][colIndex];
 
     if (cell.isReveal) return;
-    // if (cell.isReveal || this.#isGameFinished) return;
+    if (cell.isReveal || this.#isGameFinished) return;
 
     if (cell.isFlagged) {
       this.#counter.increment();
@@ -131,11 +172,35 @@ class Game extends UI {
     }
   };
 
+  #clickCell(cell) {
+    if (cell.isFlagged || this.#isGameFinished) return;
+    if (cell.isMine) {
+      this.#endGame(false);
+    }
+    cell.revealCell();
+    // this.#setCellValue(cell);
+
+    // if (this.#revealedCells === this.#cellsToReveal && !this.#isGameFinished) {
+    //   this.#endGame(true);
+    // }
+  }
+
+  #revealMines() {
+    this.#cells
+      .flat()
+      .filter(({ isMine }) => isMine)
+      .forEach((cell) => cell.revealCell());
+  }
+
   #setStyles() {
     document.documentElement.style.setProperty(
       '--cells-in-row',
       this.#numberOfCols
     );
+  }
+
+  #getRandomInteger(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 }
 

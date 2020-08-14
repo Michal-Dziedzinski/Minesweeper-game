@@ -173,6 +173,11 @@ html {
   background-image: url('../assets/flag.svg');
 }
 
+.cell--is-mine {
+  background-color: var(--alarm-color);
+  background-image: url('../assets/bomb.svg');
+}
+
 .hide {
   visibility: hidden;
 }
