@@ -2,18 +2,17 @@ import { UI } from './UI.js';
 import { Cell } from './Cell.js';
 import { Timer } from './Timer.js';
 import { Counter } from './Counter.js';
+import { ResetButton } from './ResetButton.js';
+import { Modal } from './Modal.js';
 
 class Game extends UI {
-  constructor() {
-    super();
-  }
   #config = {
     easy: {
       rows: 8,
       cols: 8,
       mines: 10,
     },
-    medium: {
+    normal: {
       rows: 16,
       cols: 16,
       mines: 40,
@@ -27,6 +26,7 @@ class Game extends UI {
 
   #timer = new Timer();
   #counter = new Counter();
+  #modal = new Modal();
 
   #isGameFinished = false;
   #numberOfRows = null;
@@ -35,14 +35,23 @@ class Game extends UI {
 
   #cells = [];
   #cellsElements = null;
+  #cellsToReveal = 0;
+  #revealedCells = 0;
 
   #board = null;
+  #buttons = {
+    modal: null,
+    easy: null,
+    normal: null,
+    expert: null,
+    reset: new ResetButton(),
+  };
 
   initializeGame() {
     this.#handleElements();
     this.#timer.init();
     this.#counter.init();
-    // this.#addButtonsEventListeners();
+    this.#addButtonsEventListeners();
     this.#newGame();
   }
   #newGame(
@@ -53,47 +62,50 @@ class Game extends UI {
     this.#numberOfRows = rows;
     this.#numberOfCols = cols;
     this.#numberOfMines = mines;
-    this.#timer.startTimer();
-    // this.#timer.resetTimer();
+    this.#timer.resetTimer();
     this.#counter.setValue(this.#numberOfMines);
-    // this.#cellsToReveal =
-    //   this.#numberOfCols * this.#numberOfRows - this.#numberOfMines;
+    this.#cellsToReveal =
+      this.#numberOfCols * this.#numberOfRows - this.#numberOfMines;
     this.#setStyles();
     this.#generateCells();
     this.#renderBoard();
     this.#placeMinesInCells();
     this.#cellsElements = this.getElements(this.UiSelectors.cell);
-    // this.#buttons.reset.changeEmoticon('neutral');
-    // this.#isGameFinished = false;
-    // this.#revealedCells = 0;
+    this.#buttons.reset.changeEmoticon('neutral');
+    this.#isGameFinished = false;
+    this.#revealedCells = 0;
     this.#addCellsEventListeners();
   }
 
   #endGame(isWin) {
     this.#isGameFinished = true;
     this.#timer.stopTimer();
-    // this.#modal.buttonText = 'Close';
+    this.#modal.buttonText = 'Close';
     if (!isWin) {
       this.#revealMines();
-      // this.#modal.infoText = 'You lost, try again!';
-      // this.#buttons.reset.changeEmoticon('negative');
-      // this.#modal.setText();
-      // this.#modal.toggleModal();
-      // return;
+      this.#modal.infoText = 'You lost, try again!';
+      this.#buttons.reset.changeEmoticon('negative');
+      this.#modal.setText();
+      this.#modal.toggleModal();
+      return;
     }
-    // this.#modal.infoText =
-    //   this.#timer.numberOfSeconds < this.#timer.maxNumberOfSeconds
-    //     ? `You won, it took you ${
-    //         this.#timer.numberOfSeconds
-    //       } seconds, congratulations!`
-    //     : `You won, congratulations!`;
-    // this.#modal.setText();
-    // this.#modal.toggleModal();
-    // this.#buttons.reset.changeEmoticon('positive');
+    this.#modal.infoText =
+      this.#timer.numberOfSeconds < this.#timer.maxNumberOfSeconds
+        ? `You won, it took you ${
+            this.#timer.numberOfSeconds
+          } seconds, congratulations!`
+        : `You won, congratulations!`;
+    this.#modal.setText();
+    this.#modal.toggleModal();
+    this.#buttons.reset.changeEmoticon('positive');
   }
 
   #handleElements() {
     this.#board = this.getElement(this.UiSelectors.board);
+    this.#buttons.modal = this.getElement(this.UiSelectors.modalButton);
+    this.#buttons.easy = this.getElement(this.UiSelectors.easyButton);
+    this.#buttons.normal = this.getElement(this.UiSelectors.normalButton);
+    this.#buttons.expert = this.getElement(this.UiSelectors.expertButton);
   }
 
   #addCellsEventListeners() {
@@ -103,8 +115,43 @@ class Game extends UI {
     });
   }
 
+  #addButtonsEventListeners() {
+    this.#buttons.modal.addEventListener('click', this.#modal.toggleModal);
+    this.#buttons.easy.addEventListener('click', () =>
+      this.#handleNewGameClick(
+        this.#config.easy.rows,
+        this.#config.easy.cols,
+        this.#config.easy.mines
+      )
+    );
+    this.#buttons.normal.addEventListener('click', () =>
+      this.#handleNewGameClick(
+        this.#config.normal.rows,
+        this.#config.normal.cols,
+        this.#config.normal.mines
+      )
+    );
+    this.#buttons.expert.addEventListener('click', () =>
+      this.#handleNewGameClick(
+        this.#config.expert.rows,
+        this.#config.expert.cols,
+        this.#config.expert.mines
+      )
+    );
+    this.#buttons.reset.element.addEventListener('click', () =>
+      this.#handleNewGameClick()
+    );
+  }
+
+  #removeCellsEventListeners() {
+    this.#cellsElements.forEach((element) => {
+      element.removeEventListener('click', this.#handleCellClick);
+      element.removeEventListener('contextmenu', this.#handleCellContextMenu);
+    });
+  }
+
   #generateCells() {
-    // this.#cells.length = 0;
+    this.#cells.length = 0;
     for (let row = 0; row < this.#numberOfRows; row++) {
       this.#cells[row] = [];
       for (let col = 0; col < this.#numberOfCols; col++) {
@@ -114,9 +161,9 @@ class Game extends UI {
   }
   #renderBoard() {
     // this.board.innerHTML = '';
-    // while (this.#board.firstChild) {
-    //   this.#board.removeChild(this.#board.lastChild);
-    // }
+    while (this.#board.firstChild) {
+      this.#board.removeChild(this.#board.lastChild);
+    }
     this.#cells.flat().forEach((cell) => {
       this.#board.insertAdjacentHTML('beforeend', cell.createElement());
       cell.element = cell.getElement(cell.selector);
@@ -141,6 +188,15 @@ class Game extends UI {
     }
   }
 
+  #handleNewGameClick = (
+    rows = this.#numberOfRows,
+    cols = this.#numberOfCols,
+    mines = this.#numberOfMines
+  ) => {
+    this.#removeCellsEventListeners();
+    this.#newGame(rows, cols, mines);
+  };
+
   #handleCellClick = (e) => {
     const target = e.target;
     const rowIndex = parseInt(target.getAttribute('data-y'), 10);
@@ -158,7 +214,6 @@ class Game extends UI {
 
     const cell = this.#cells[rowIndex][colIndex];
 
-    if (cell.isReveal) return;
     if (cell.isReveal || this.#isGameFinished) return;
 
     if (cell.isFlagged) {
@@ -179,9 +234,9 @@ class Game extends UI {
     }
     this.#setCellValue(cell);
 
-    // if (this.#revealedCells === this.#cellsToReveal && !this.#isGameFinished) {
-    //   this.#endGame(true);
-    // }
+    if (this.#revealedCells === this.#cellsToReveal && !this.#isGameFinished) {
+      this.#endGame(true);
+    }
   }
 
   #revealMines() {
@@ -208,7 +263,7 @@ class Game extends UI {
     }
     cell.value = mineCount;
     cell.revealCell();
-    // this.#revealedCells++;
+    this.#revealedCells++;
     if (!cell.value) {
       for (
         let rowIndex = Math.max(cell.y - 1, 0);
